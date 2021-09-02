@@ -158,3 +158,16 @@ extension UiImageX on ui.Image {
   ]) async =>
       (await this.toByteData(format: format))!.buffer.asUint8List();
 }
+
+extension NavigatorHelper on StateController {
+  BuildContext get context => widget.state.context;
+
+  Future<E?> toNamed<E>(
+    String routeName,
+  ) =>
+      Navigator.of(context).pushNamed<E>(
+        routeName,
+      );
+
+  void pop<T>([T? result]) => Navigator.of(context).pop(result);
+}

@@ -22,7 +22,10 @@ class HomePage extends StateWidget<HomePageState> {
               onPressed: state.openContact,
             ),
             const Divider(),
-            Text('Hello'),
+            TextButton(
+              onPressed: state.test,
+              child: Text('state'),
+            ),
           ],
         ),
       ),

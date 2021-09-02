@@ -13,6 +13,16 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       home: const HomePage(),
+      routes: {
+        '/test': (ctx) => Scaffold(
+              appBar: AppBar(
+                title: Text('test'),
+              ),
+            )
+      },
+      onUnknownRoute: (e) {
+        print(e.name);
+      },
     );
   }
 }

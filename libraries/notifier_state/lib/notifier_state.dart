@@ -1,6 +1,7 @@
 library notifier_state;
 
 import 'dart:async';
+
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 

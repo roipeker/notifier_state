@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'package:notifier_state/notifier_state.dart';
 import 'package:notifier_state_sample/services/some_service.dart';
@@ -18,5 +17,9 @@ class HomePageState extends StateController<HomePage> {
         builder: (_) => AboutPage(),
       ),
     );
+  }
+
+  void test() {
+    toNamed('/test');
   }
 }
