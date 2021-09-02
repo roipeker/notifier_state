@@ -156,7 +156,5 @@ extension UiImageX on ui.Image {
   Future<Uint8List> bytes([
     ui.ImageByteFormat format = ui.ImageByteFormat.png,
   ]) async =>
-      (await this.toByteData(format: ui.ImageByteFormat.png))!
-          .buffer
-          .asUint8List();
+      (await this.toByteData(format: format))!.buffer.asUint8List();
 }
