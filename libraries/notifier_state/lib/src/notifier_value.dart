@@ -1,0 +1,290 @@
+part of notifier_state;
+
+class NotifierValue<T> extends ValueNotifier<T> {
+  static _ObxNotifier? _proxyNotifier;
+  Map<Stream, StreamSubscription> _subscriptions = {};
+  DisposerNotifier? _disposer;
+
+  NotifierValue<T> hookDispose(DisposerNotifier? instance) {
+    _disposer = instance;
+    _disposer?.addListener(_onDispose);
+    return this;
+  }
+
+  void _onDispose() {
+    _disposer?.removeListener(_onDispose);
+    dispose();
+  }
+
+  NotifierValue(T value) : super(value);
+
+  final Expando<VoidCallback> _valueListeners = Expando();
+
+  void addValueListener(ValueChanged<T> listener) {
+    _valueListeners[listener] = () {
+      listener(super.value);
+    };
+    addListener(_valueListeners[listener]!);
+  }
+
+  void removeValueListener(ValueChanged<T> listener) {
+    if (_valueListeners[listener] != null) {
+      removeListener(_valueListeners[listener]!);
+      _valueListeners[listener] = null;
+    }
+  }
+
+  FutureOr closeStream(Stream<T> stream) {
+    if (_subscriptions.containsKey(stream)) {
+      return _subscriptions.remove(stream)!.cancel();
+    }
+  }
+
+  void bindStream(Stream<T> stream) {
+    late StreamSubscription subscription;
+    subscription = stream.asBroadcastStream().listen((event) {
+      this.value = event;
+    }, onDone: () {
+      subscription.cancel();
+      _subscriptions.remove(subscription);
+    });
+    _subscriptions[stream] = subscription;
+  }
+
+  @override
+  String toString() => '$value';
+
+  T call([T? newValue]) {
+    if (newValue != null && newValue != value) {
+      value = newValue;
+    }
+    return value;
+  }
+
+  @override
+  set value(T newValue) {
+    if (newValue != super.value) {
+      super.value = newValue;
+    }
+  }
+
+  @override
+  T get value {
+    if (NotifierValue._proxyNotifier != null) {
+      NotifierValue._proxyNotifier!.add(this);
+    }
+    return super.value;
+  }
+
+  void update(T Function(T value) fn) {
+    value = fn(super.value);
+  }
+
+  @override
+  void dispose() {
+    if (_proxyNotifier != null) {
+      _proxyNotifier!.remove(this);
+    }
+    for (final subscription in _subscriptions.values) {
+      subscription.cancel();
+    }
+    _subscriptions.clear();
+    super.dispose();
+  }
+}
+
+abstract class IValueNotifier<T> {
+  /// complies with obs().
+}
+
+mixin DisposerMixin<T extends StatefulWidget> on State<T>
+implements DisposerNotifier {
+  final _disposer = _DisposerNotifier();
+
+  void addListener(VoidCallback fn) => _disposer.addListener(fn);
+
+  void removeListener(VoidCallback fn) => _disposer.removeListener(fn);
+
+  void dispose() {
+    _disposer.dispose();
+    super.dispose();
+  }
+}
+
+class _DisposerNotifier extends ChangeNotifier {
+  @override
+  void dispose() {
+    notifyListeners();
+    super.dispose();
+  }
+}
+
+abstract class DisposerNotifier {
+  final _disposer = _DisposerNotifier();
+
+  void addListener(VoidCallback fn) => _disposer.addListener(fn);
+
+  void removeListener(VoidCallback fn) => _disposer.removeListener(fn);
+
+  void dispose() {
+    _disposer.dispose();
+  }
+}
+
+extension ValueNotifierX<T> on ValueListenable<T> {
+  String get string => '$value';
+
+  Widget widget<T>({
+    Widget? child,
+    required ValueWidgetBuilder<T> builder,
+  }) {
+    return ValueListenableBuilder<T>(
+      valueListenable: this as ValueListenable<T>,
+      builder: builder,
+      child: child,
+    );
+  }
+}
+
+class Observer extends StatelessWidget {
+  final Widget Function() builder;
+
+  const Observer(
+      this.builder, {
+        Key? key,
+      }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return ObserverBuilder(
+      builder: (_, __) => builder(),
+    );
+  }
+}
+
+class ObserverBuilder extends StatefulWidget {
+  final TransitionBuilder builder;
+  final Widget? child;
+
+  @override
+  void debugFillProperties(DiagnosticPropertiesBuilder properties) {
+    super.debugFillProperties(properties);
+    properties..add(ObjectFlagProperty<Function>.has('builder', builder));
+  }
+
+  const ObserverBuilder({
+    Key? key,
+    required this.builder,
+    this.child,
+  }) : super(key: key);
+
+  @override
+  _ObserverBuilderState createState() => _ObserverBuilderState();
+}
+
+class _ObserverBuilderState extends State<ObserverBuilder> {
+  late _ObxNotifier notifier = _ObxNotifier(update);
+
+  void update() {
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
+  @override
+  void dispose() {
+    notifier.dispose(false);
+    super.dispose();
+  }
+
+  Widget notifyChild(BuildContext context, Widget? child) {
+    final oldNotifier = NotifierValue._proxyNotifier;
+    NotifierValue._proxyNotifier = notifier;
+    final result = widget.builder(context, child);
+    if (!notifier.canUpdate) {
+      NotifierValue._proxyNotifier = oldNotifier;
+      throw """
+      [NotifierValue] improper use of Observer() or ObserverBuilder() detected.
+      Use [NotifierValue](s) directly in the scope of the builder().
+      If you need to update a parent widget and a child widget, wrap them separately in Observer() or ObserverBuilder().
+      """;
+    }
+    NotifierValue._proxyNotifier = oldNotifier;
+    return result;
+  }
+
+  @override
+  void reassemble() {
+    notifier.dispose(true);
+    super.reassemble();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: notifier.notifications,
+      builder: (_, child) => notifyChild(context, child),
+      child: widget.child,
+    );
+  }
+}
+
+class _ObxNotifier {
+  static final emptyListener = ChangeNotifier();
+  Listenable notifications = emptyListener;
+  final VoidCallback stateSetter;
+  final _notis = <NotifierValue>{};
+  Set<NotifierValue>? _cachedNotis;
+
+  bool _dirtyWidget = false;
+
+  _ObxNotifier(this.stateSetter);
+
+  bool get canUpdate => _notis.isNotEmpty;
+
+  void add(NotifierValue noti) {
+    if (!_notis.contains(noti)) {
+      if (_cachedNotis != null && _dirtyWidget && _cachedNotis!.isNotEmpty) {
+        final _cached = _cachedNotis!;
+        for (var m in _cached) {
+          m.dispose();
+        }
+        _notis.removeAll(_cached);
+        _cached.clear();
+        _cachedNotis = null;
+      }
+      _notis.add(noti);
+      _updateCollection();
+    }
+  }
+
+  void remove(NotifierValue motion) {
+    if (_notis.contains(motion)) {
+      _notis.remove(motion);
+      _updateCollection();
+    }
+  }
+
+  void _updateCollection() {
+    if (_notis.isEmpty) {
+      notifications = emptyListener;
+    } else {
+      notifications = Listenable.merge(_notis.toList(growable: false));
+    }
+    WidgetsBinding.instance!.addPostFrameCallback((timeStamp) => stateSetter());
+  }
+
+  void dispose([bool reassembling = false]) {
+    final _buffer = List.of(_notis);
+    // _buffer.forEach((e) {
+    //   if (e is _ValueNoti && reassembling) {
+    //     e.dispose();
+    //   }
+    // });
+    notifications = emptyListener;
+    _notis.clear();
+    _buffer.clear();
+    _cachedNotis?.clear();
+    _cachedNotis = null;
+  }
+}
