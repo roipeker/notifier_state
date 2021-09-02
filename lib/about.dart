@@ -1,4 +1,8 @@
+import 'dart:typed_data';
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:notifier_state/notifier_state.dart';
 import 'package:notifier_state_sample/services/some_service.dart';
@@ -27,34 +31,55 @@ class AboutPage extends StateWidget<AboutPageState> {
           ),
         ],
       ),
-      body: Center(
-        child: Column(
-          children: [
-            Text('state name (not updated): ${state.name}'),
-            Divider(),
-            Text('Lazy service: "${state.lazyServiceName}"'),
-            Divider(),
-            Text('Factory service: "${state.factoryServiceNameAndHash}"'),
-            Container(
-              padding: EdgeInsets.all(16),
-              child: Observer(() => Text('Ticker: ${state.tickerText}')),
-            ),
-            Divider(),
-            Observer(() =>
-                Switch(value: state.switcher(), onChanged: state.switcher)),
-            Divider(),
-            Observer(
-              () => state.isButtonShown() || state.switcher()
-                  ? IconButton(
-                      onPressed: state.isButtonShown.toggle,
-                      icon: Icon(Icons.add_location),
-                    )
-                  : Container(),
-            ),
-            Divider(),
-            AboutTitleText(),
-            Divider(),
-          ],
+      body: SingleChildScrollView(
+        child: Center(
+          child: Column(
+            children: [
+              Observer(
+                () => Column(
+                  children: [
+                    Text('Behold the capture:'),
+                    if (state.hasImage)
+                      Container(
+                        color: Colors.white,
+                        // padding: EdgeInsets.all(2),
+                        child: Image.memory(
+                          state.imageBytes!,
+                          scale: 2,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              Text('state name (not updated): ${state.name}'),
+              Divider(),
+              Text('Lazy service: "${state.lazyServiceName}"'),
+              Divider(),
+              Text('Factory service: "${state.factoryServiceNameAndHash}"'),
+              Container(
+                padding: EdgeInsets.all(16),
+                child: Observer(() => Text('Ticker: ${state.tickerText}')),
+              ),
+              Divider(),
+              Observer(() =>
+                  Switch(value: state.switcher(), onChanged: state.switcher)),
+              Divider(),
+              Observer(
+                () => state.isButtonShown() || state.switcher()
+                    ? IconButton(
+                        onPressed: state.isButtonShown.toggle,
+                        icon: Icon(Icons.add_location),
+                      )
+                    : Container(),
+              ),
+              Divider(),
+              Container(
+                width: 300,
+                child: AboutTitleText(),
+              ),
+              Divider(),
+            ],
+          ),
         ),
       ),
     );
@@ -68,6 +93,12 @@ class AboutPageState extends StateController<AboutPage>
   late final switcher = false.obs(onChange: onSwitchChange);
   late final isButtonShown = true.obs(onChange: onButtonShown);
   late final Ticker _ticker = createTicker(tickerText);
+
+  bool get hasImage => imageBytes != null;
+
+  Uint8List? get imageBytes {
+    return bucket.get<SomeLazyService>().imgProvider();
+  }
 
   @override
   void initState() {
@@ -99,5 +130,17 @@ class AboutPageState extends StateController<AboutPage>
   void onSwitchChange(bool state) {
     print("Switch change! $state");
     Future.microtask(() => isButtonShown(!state));
+  }
+
+  void saveImage(ui.Image img) async {
+    final service = bucket<SomeLazyService>();
+    service.updateImageBytes(await img.bytes());
+  }
+
+  void capturePhoto(BuildContext ctx, {double pixelRatio = 1}) async {
+    final image = await ctx.toImage(
+      pixelRatio: pixelRatio,
+    );
+    saveImage(image);
   }
 }

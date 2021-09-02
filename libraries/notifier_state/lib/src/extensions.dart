@@ -99,4 +99,55 @@ extension BuildContextX on BuildContext {
   TextTheme get textTheme => theme.textTheme;
 
   Size? get size => this.size;
+
+  Future<ui.Image> toImage({
+    double pixelRatio = 1.0,
+    EdgeInsets margin = EdgeInsets.zero,
+  }) {
+    final e = this as Element;
+    if (e.dirty) {
+      // print('[toImage()] Element is dirty, waiting 1 frame to capture image');
+      return Future.microtask(
+          () => _captureImageFromElement(e, scale: pixelRatio, margin: margin));
+    }
+    return _captureImageFromElement(e, scale: pixelRatio, margin: margin);
+  }
+
+  // static final OffsetLayer _samplerLayer = OffsetLayer();
+  static final OffsetLayer _stopRecordingLayer = OffsetLayer();
+
+  Future<ui.Image> _captureImageFromElement(
+    Element e, {
+    double scale = 1.0,
+    EdgeInsets margin = EdgeInsets.zero,
+  }) {
+    if (e.dirty) {
+      return Future.error(
+          ErrorHint('[toImage()] BuildContext is in dirty state.'));
+    }
+    assert(e.renderObject is RenderBox,
+        "[context.toImage()] Can only capture capture RenderObject descendants.");
+    final ro = e.renderObject as RenderBox;
+    final _samplerLayer = OffsetLayer();
+    final paintContext = PaintingContext(
+        _samplerLayer, margin.inflateRect(Offset.zero & ro.size));
+    ro.paint(paintContext, Offset.zero);
+    // preferred adding a static Layer than using the protected method to stop
+    // recording?
+    /// paintContext.stopRecordingIfNeeded();
+    paintContext.addLayer(_stopRecordingLayer);
+    return _samplerLayer.toImage(
+      paintContext.estimatedBounds,
+      pixelRatio: scale,
+    );
+  }
+}
+
+extension UiImageX on ui.Image {
+  Future<Uint8List> bytes([
+    ui.ImageByteFormat format = ui.ImageByteFormat.png,
+  ]) async =>
+      (await this.toByteData(format: ui.ImageByteFormat.png))!
+          .buffer
+          .asUint8List();
 }
