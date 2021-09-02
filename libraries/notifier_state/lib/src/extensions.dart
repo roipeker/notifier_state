@@ -100,6 +100,16 @@ extension BuildContextX on BuildContext {
 
   Size? get size => this.size;
 
+  /// Get the ui.Image bytes list to export to File, or consume with Image.memory()
+  Future<Uint8List> toImageBytes({
+    double pixelRatio = 1.0,
+    EdgeInsets margin = EdgeInsets.zero,
+    ui.ImageByteFormat format = ui.ImageByteFormat.png,
+  }) =>
+      toImage(pixelRatio: pixelRatio, margin: margin)
+          .then((value) => value.bytes(format));
+
+  /// Get an ui.Image capture of this Element's RenderObject.
   Future<ui.Image> toImage({
     double pixelRatio = 1.0,
     EdgeInsets margin = EdgeInsets.zero,
@@ -113,7 +123,6 @@ extension BuildContextX on BuildContext {
     return _captureImageFromElement(e, scale: pixelRatio, margin: margin);
   }
 
-  // static final OffsetLayer _samplerLayer = OffsetLayer();
   static final OffsetLayer _stopRecordingLayer = OffsetLayer();
 
   Future<ui.Image> _captureImageFromElement(
