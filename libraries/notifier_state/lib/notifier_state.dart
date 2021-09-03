@@ -11,6 +11,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 
 part 'src/notifier_value.dart';
+part 'src/anotations/route_generator.dart';
 part 'src/extensions/extensions.dart';
 part 'src/extensions/context_notifications.dart';
 part 'src/widgets.dart';

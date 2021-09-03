@@ -3,6 +3,7 @@ import 'package:notifier_state/notifier_state.dart';
 
 import 'home_state.dart';
 
+@CustomRoute('/')
 class HomePage extends StateWidget<HomePageState> {
   const HomePage({Key? key}) : super(key: key);
 
