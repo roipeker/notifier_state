@@ -8,8 +8,6 @@ class AboutTitleText extends ParentStateWidget<AboutPageState> {
 
   @override
   Widget build(BuildContext context) {
-    /// capture at 1x... is async.
-    // state.capturePhoto(context, pixelRatio: 1);
     return Column(
       children: [
         Observer(() => Text("Parent state name: ${state.name}")),

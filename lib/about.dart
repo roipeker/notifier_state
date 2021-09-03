@@ -9,79 +9,113 @@ import 'package:notifier_state_sample/services/some_service.dart';
 
 import 'about_title.dart';
 
-class AboutPage extends StateWidget<AboutPageState> {
+mixin RouteBuilderMixin<C extends StateController> on StateWidget<C> {
+  String? get routeName;
+
+  Route<T?> createRoute<T>({Object? arguments}) {
+    return RouteBuilder.material<T>(
+      builder: (_) => this,
+      name: routeName,
+      arguments: arguments,
+    );
+  }
+}
+
+class AboutPage extends StateWidget<AboutPageState> with RouteBuilderMixin {
+  @override
+  final routeName = '/about';
+
   const AboutPage({Key? key}) : super(key: key);
 
   @override
-  AboutPageState createState() => AboutPageState();
+  createState() => AboutPageState();
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        actions: [
-          Observer(
-            () => Visibility(
-              visible: !state.isButtonShown(),
-              child: IconButton(
-                onPressed: state.isButtonShown.toggle,
-                icon: Icon(Icons.add_location),
-              ),
-            ),
-          ),
-        ],
-      ),
-      body: SingleChildScrollView(
-        child: Center(
-          child: Column(
-            children: [
-              Observer(
-                () => Column(
-                  children: [
-                    Text('Behold the capture:'),
-                    if (state.hasImage)
-                      Container(
-                        color: Colors.white,
-                        // padding: EdgeInsets.all(2),
-                        child: Image.memory(
-                          state.imageBytes!,
-                          scale: 2,
-                        ),
-                      ),
-                  ],
+    return NotificationListener<EventNotification>(
+      onNotification: (data) {
+        print("event data: $data");
+        return false;
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          actions: [
+            Observer(
+              () => Visibility(
+                visible: !state.isButtonShown(),
+                child: IconButton(
+                  onPressed: state.isButtonShown.toggle,
+                  icon: Icon(Icons.add_location),
                 ),
               ),
-              Text('state name (not updated): ${state.name}'),
-              Divider(),
-              Text('Lazy service: "${state.lazyServiceName}"'),
-              Divider(),
-              Text('Factory service: "${state.factoryServiceNameAndHash}"'),
-              Container(
-                padding: EdgeInsets.all(16),
-                child: Observer(() => Text('Ticker: ${state.tickerText}')),
-              ),
-              Divider(),
-              Observer(() =>
-                  Switch(value: state.switcher(), onChanged: state.switcher)),
-              Divider(),
-              Observer(
-                () => state.isButtonShown() || state.switcher()
-                    ? IconButton(
-                        onPressed: state.isButtonShown.toggle,
-                        icon: Icon(Icons.add_location),
-                      )
-                    : Container(),
-              ),
-              Divider(),
-              Container(
-                width: 300,
-                child: AboutTitleText(),
-              ),
-              Divider(),
-            ],
+            ),
+          ],
+        ),
+        body: SingleChildScrollView(
+          child: Center(
+            child: Column(
+              children: [
+                Observer(
+                  () => Column(
+                    children: [
+                      Text('Behold the capture:'),
+                      if (state.hasImage)
+                        Container(
+                          color: Colors.white,
+                          // padding: EdgeInsets.all(2),
+                          child: Image.memory(
+                            state.imageBytes!,
+                            scale: 2,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                Text('state name (not updated): ${state.name}'),
+                Divider(),
+                Text('Lazy service: "${state.lazyServiceName}"'),
+                Divider(),
+                Text('Factory service: "${state.factoryServiceNameAndHash}"'),
+                Container(
+                  padding: EdgeInsets.all(16),
+                  child: Observer(() => Text('Ticker: ${state.tickerText}')),
+                ),
+                Divider(),
+                Observer(() =>
+                    Switch(value: state.switcher(), onChanged: state.switcher)),
+                Divider(),
+                Observer(
+                  () => state.isButtonShown() || state.switcher()
+                      ? IconButton(
+                          onPressed: state.isButtonShown.toggle,
+                          icon: Icon(Icons.add_location),
+                        )
+                      : Container(),
+                ),
+                Divider(),
+                Container(
+                  width: 300,
+                  child: AboutTitleText(),
+                ),
+                Divider(),
+              ],
+            ),
           ),
         ),
       ),
+    );
+  }
+}
+
+class RouteBuilder {
+  static Route<T?> material<T extends Object?>({
+    required WidgetBuilder builder,
+    Object? arguments,
+    String? name,
+  }) {
+    return MaterialPageRoute<T?>(
+      builder: builder,
+      settings: RouteSettings(arguments: arguments, name: name),
     );
   }
 }

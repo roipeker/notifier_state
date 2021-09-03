@@ -6,8 +6,12 @@ import 'package:notifier_state/notifier_state.dart';
 final bucket = Bucket.instance;
 
 void initServices() {
+  bucket.put(SomeNavService());
   bucket.lazyPut(() => SomeLazyService());
   bucket.factory(() => SomeFactoryService());
+}
+class SomeNavService {
+  final selectedBottom = 0.obs();
 }
 
 class SomeFactoryService {

@@ -12,20 +12,43 @@ abstract class StateWidget<T extends State> extends StatefulWidget {
   StateElement createElement() => StateElement(this);
 
   @override
-  T createState();
+  StateController createState();
 }
 
-class StateElement extends StatefulElement {
+class StateElement extends StatefulElement with ExposedElementMixin {
   static final _elements = Expando('State Controllers');
+
+  bool _justMounted = true;
 
   StateElement(StateWidget widget) : super(widget) {
     _elements[widget] = state;
   }
 
   @override
+  void mount(Element? parent, Object? newSlot) {
+    _justMounted = true;
+    super.mount(parent, newSlot);
+  }
+
+  @override
+  void unmount() {
+    _justMounted = false;
+    super.unmount();
+  }
+
+  @override
   void update(StatefulWidget newWidget) {
     _elements[newWidget] = state;
     super.update(newWidget);
+  }
+
+  @override
+  void rebuild() {
+    if (_justMounted) {
+      _justMounted = false;
+      (state as StateController).readyState();
+    }
+    super.rebuild();
   }
 
   @override
@@ -37,11 +60,25 @@ class StateElement extends StatefulElement {
 
 /// use [StateController] instead of `State` for [StateWidget].
 class StateController<T extends StateWidget> extends State<T> {
-  @protected
+
+  @alwaysThrows
   @override
   Widget build(BuildContext context) {
     throw "$runtimeType\.build() is invalid. Use <StateWidget.build()> instead.";
   }
+
+  /// Use this instead of didChangeDependencies() / initState()
+  /// context is "safe"
+  @visibleForOverriding
+  @protected
+  void readyState() {}
+
+  @override
+  StatefulElement get context => super.context as StatefulElement;
+
+  NavigatorState get navigator => Navigator.of(context);
+
+  Object? get navigatorArguments => ModalRoute.of(context)?.settings.arguments;
 
   /// useless for now.
   void addDependant(BuildContext other) {}
@@ -49,11 +86,7 @@ class StateController<T extends StateWidget> extends State<T> {
   void removeDependant(BuildContext other) {}
 }
 
-/// Use instead of `StatelessWidget` to consume parent [StateControllers].
-abstract class ParentStateWidget<T extends StateController>
-    extends StatelessWidget {
-  const ParentStateWidget({Key? key}) : super(key: key);
-
+mixin ParentStateMixin<T extends StateController> on StatelessWidget {
   T get state =>
       (StateElement._elements[this] as ParentStateElement)._otherState as T;
 
@@ -67,10 +100,70 @@ abstract class ParentStateWidget<T extends StateController>
   }
 }
 
-class ParentStateElement<T extends StateController> extends StatelessElement {
+/// Use instead of `StatelessWidget` to consume parent [StateControllers].
+abstract class ParentStateWidget<T extends StateController>
+    extends StatelessWidget with ParentStateMixin<T> {
+  const ParentStateWidget({Key? key}) : super(key: key);
+
+// T get state =>
+//     (StateElement._elements[this] as ParentStateElement)._otherState as T;
+//
+// @override
+// ParentStateElement createElement() {
+//   assert(const Object() is! T, """
+//         You have to provide a subclass of StateController:
+//         $runtimeType extends ParentStateWidget<StateController>
+//      """);
+//   return ParentStateElement<T>(this);
+// }
+}
+
+mixin ExposedElementMixin on ComponentElement {
+  bool mounted = false;
+
+  @override
+  void mount(Element? parent, Object? newSlot) {
+    mounted = true;
+    super.mount(parent, newSlot);
+  }
+
+  @override
+  void unmount() {
+    mounted = false;
+    _clearNotifiers();
+    super.unmount();
+  }
+
+  void _clearNotifiers() {
+    for (final notifier in _notifiers) {
+      notifier.removeListener(_onNotification);
+    }
+    _notifiers.clear();
+  }
+
+  final _notifiers = <NotifierValue>{};
+
+  void _removeNotifier(NotifierValue notifier) {
+    if (_notifiers.remove(notifier)) {
+      notifier.removeListener(_onNotification);
+    }
+  }
+
+  void _addNotifier(NotifierValue notifier) {
+    _notifiers.add(notifier);
+    notifier.addListener(_onNotification);
+  }
+
+  void _onNotification() {
+    markNeedsBuild();
+  }
+}
+
+class ParentStateElement<T extends StateController> extends StatelessElement
+    with ExposedElementMixin {
   late T _otherState;
 
-  ParentStateElement(ParentStateWidget widget) : super(widget) {
+  ParentStateElement(StatelessWidget widget) : super(widget) {
     StateElement._elements[widget] = this;
   }
 
@@ -125,6 +218,6 @@ class ParentStateElement<T extends StateController> extends StatelessElement {
     return _state;
   }
 
-  @override
-  ParentStateWidget get widget => super.widget as ParentStateWidget;
+  // @override
+  // ParentStateWidget get widget => super.widget as ParentStateWidget;
 }

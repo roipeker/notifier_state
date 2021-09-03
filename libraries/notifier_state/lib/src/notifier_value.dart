@@ -16,22 +16,24 @@ class NotifierValue<T> extends ValueNotifier<T> {
     dispose();
   }
 
+  /// To prevent potential thrown exceptions.
+  bool _disposed = false;
+  bool get disposed => _disposed;
+
   NotifierValue(T value) : super(value);
 
-  final Expando<VoidCallback> _valueListeners = Expando();
-
+  final Map<ValueChanged<T>, VoidCallback> _valueListeners = {};
   void addValueListener(ValueChanged<T> listener) {
-    _valueListeners[listener] = () {
-      listener(super.value);
-    };
-    addListener(_valueListeners[listener]!);
+    if (!_valueListeners.containsKey(listener)) {
+      _valueListeners[listener] = () => listener(value);
+      addListener(_valueListeners[listener]!);
+    }
   }
 
-  void removeValueListener(ValueChanged<T> listener) {
-    if (_valueListeners[listener] != null) {
-      removeListener(_valueListeners[listener]!);
-      _valueListeners[listener] = null;
-    }
+  bool removeValueListener(ValueChanged<T> listener) {
+    if (!_valueListeners.containsKey(listener)) return false;
+    removeListener(_valueListeners.remove(listener)!);
+    return true;
   }
 
   FutureOr closeStream(Stream<T> stream) {
@@ -64,7 +66,9 @@ class NotifierValue<T> extends ValueNotifier<T> {
   @override
   set value(T newValue) {
     if (newValue != super.value) {
+      // if (!_disposed) {
       super.value = newValue;
+      // }
     }
   }
 
@@ -82,6 +86,7 @@ class NotifierValue<T> extends ValueNotifier<T> {
 
   @override
   void dispose() {
+    _disposed = true;
     if (_proxyNotifier != null) {
       _proxyNotifier!.remove(this);
     }
@@ -89,7 +94,28 @@ class NotifierValue<T> extends ValueNotifier<T> {
       subscription.cancel();
     }
     _subscriptions.clear();
+    _subscribedElements.clear();
     super.dispose();
+  }
+
+  final _subscribedElements = <ComponentElement, VoidCallback>{};
+
+  T subscribe(BuildContext context) {
+    _addContextSubscription(context as ComponentElement);
+    return value;
+  }
+
+  void _addContextSubscription(ComponentElement context) {
+    if (_subscribedElements.keys.contains(context)) return;
+    addListener(_subscribedElements[context] = () {
+      try {
+        context.markNeedsBuild();
+      } catch (e) {
+        /// Throws cause the Element is dead.
+        final selfCallback = _subscribedElements.remove(context)!;
+        removeListener(selfCallback);
+      }
+    });
   }
 }
 
@@ -98,7 +124,7 @@ abstract class IValueNotifier<T> {
 }
 
 mixin DisposerMixin<T extends StatefulWidget> on State<T>
-implements DisposerNotifier {
+    implements DisposerNotifier {
   final _disposer = _DisposerNotifier();
 
   void addListener(VoidCallback fn) => _disposer.addListener(fn);
@@ -150,9 +176,9 @@ class Observer extends StatelessWidget {
   final Widget Function() builder;
 
   const Observer(
-      this.builder, {
-        Key? key,
-      }) : super(key: key);
+    this.builder, {
+    Key? key,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {

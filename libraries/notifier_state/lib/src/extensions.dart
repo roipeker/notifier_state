@@ -91,6 +91,10 @@ extension ContextNotificationX on BuildContext {
   void notifyData<T>(T event) => DataNotification(event).dispatch(this);
 }
 
+extension ContextNotifierValueX on BuildContext {
+  T listen<T>(NotifierValue<T> notifier) => notifier.subscribe(this);
+}
+
 extension BuildContextX on BuildContext {
   MediaQueryData get mediaQuery => MediaQuery.of(this);
 
