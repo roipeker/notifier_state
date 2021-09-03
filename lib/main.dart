@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'test/test_page.dart';
 
 import 'home/home.dart';
 import 'services/some_service.dart';
@@ -12,17 +13,19 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      home: const HomePage(),
+      navigatorObservers: [
+        navigatorObserver,
+      ],
+      initialRoute: '/',
       routes: {
-        '/test': (ctx) => Scaffold(
-              appBar: AppBar(
-                title: Text('test'),
-              ),
-            )
+        '/': HomePage.create,
+        '/test': TestPage.create,
       },
       onUnknownRoute: (e) {
         print(e.name);
       },
     );
   }
+
+  final navigatorObserver = RouteObserver();
 }

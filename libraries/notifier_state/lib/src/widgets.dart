@@ -36,12 +36,27 @@ class StateElement extends StatefulElement {
 }
 
 /// use [StateController] instead of `State` for [StateWidget].
-class StateController<T extends StateWidget> extends State<T> {
+class StateController<T extends StateWidget> extends State<T>
+    with DisposerMixin{
   @protected
   @override
   Widget build(BuildContext context) {
     throw "$runtimeType\.build() is invalid. Use <StateWidget.build()> instead.";
   }
+
+  bool isInitialized = false;
+
+  @mustCallSuper
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance!.addPostFrameCallback((_) {
+      isInitialized = true;
+      onReady();
+    });
+  }
+
+  void onReady() {}
 
   /// useless for now.
   void addDependant(BuildContext other) {}

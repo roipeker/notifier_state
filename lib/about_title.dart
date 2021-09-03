@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:notifier_state/notifier_state.dart';
-import 'package:notifier_state_sample/about.dart';
+import 'about.dart';
 
 class AboutTitleText extends ParentStateWidget<AboutPageState> {
   const AboutTitleText({Key? key}) : super(key: key);

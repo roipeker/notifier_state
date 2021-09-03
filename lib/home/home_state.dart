@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:notifier_state/notifier_state.dart';
-import 'package:notifier_state_sample/services/some_service.dart';
+
+import '../services/some_service.dart';
 
 import '../about.dart';
 import 'home.dart';
 
-/// --- controller.
 class HomePageState extends StateController<HomePage> {
   Future<void> openContact() async {
     // final bytes = await context.toImage().then((value) => value.bytes());
@@ -19,7 +19,14 @@ class HomePageState extends StateController<HomePage> {
     );
   }
 
-  void test() {
-    toNamed('/test');
+  void test() async {
+    final result = await nav.pushNamed(
+      '/test',
+      arguments: 'test arguments',
+    );
+    print(result);
+    print(result.runtimeType);
   }
+
+  void testDialog() async {}
 }

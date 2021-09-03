@@ -160,14 +160,27 @@ extension UiImageX on ui.Image {
 }
 
 extension NavigatorHelper on StateController {
-  BuildContext get context => widget.state.context;
+  BuildContext get context {
+    if (!isInitialized) {
+      throw '''
+      Improper use of [BuildContext] detected.
+      Do not call the context in the `initState` method, call on the onReady instead.
+      ''';
+    }
+    return widget.state.context;
+  }
 
-  Future<E?> toNamed<E>(
-    String routeName,
-  ) =>
-      Navigator.of(context).pushNamed<E>(
-        routeName,
+  Object? get arguments => ModalRoute.of(context)?.settings.arguments;
+
+  NavigatorState get nav => Navigator.of(context);
+
+  ScaffoldMessengerState get scaffoldState => ScaffoldMessenger.of(context);
+
+  Future<E?> dialog<E>(Widget child, {Object? arguments}) => showDialog(
+        context: context,
+        builder: (_) => child,
+        routeSettings: RouteSettings(
+          arguments: arguments,
+        ),
       );
-
-  void pop<T>([T? result]) => Navigator.of(context).pop(result);
 }

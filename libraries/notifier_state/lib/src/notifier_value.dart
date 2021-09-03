@@ -98,7 +98,7 @@ abstract class IValueNotifier<T> {
 }
 
 mixin DisposerMixin<T extends StatefulWidget> on State<T>
-implements DisposerNotifier {
+    implements DisposerNotifier {
   final _disposer = _DisposerNotifier();
 
   void addListener(VoidCallback fn) => _disposer.addListener(fn);
@@ -150,9 +150,9 @@ class Observer extends StatelessWidget {
   final Widget Function() builder;
 
   const Observer(
-      this.builder, {
-        Key? key,
-      }) : super(key: key);
+    this.builder, {
+    Key? key,
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {

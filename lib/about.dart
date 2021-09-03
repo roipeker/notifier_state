@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:notifier_state/notifier_state.dart';
-import 'package:notifier_state_sample/services/some_service.dart';
+import 'services/some_service.dart';
 
 import 'about_title.dart';
 
@@ -86,12 +86,12 @@ class AboutPage extends StateWidget<AboutPageState> {
   }
 }
 
-class AboutPageState extends StateController<AboutPage>
-    with DisposerMixin, SingleTickerProviderStateMixin {
+class AboutPageState extends StateController<AboutPage> with
+     SingleTickerProviderStateMixin {
   late final name = 'Yo'.obs(disposer: this);
   final tickerText = NotifierValue(Duration.zero);
   late final switcher = false.obs(onChange: onSwitchChange);
-  late final isButtonShown = true.obs(onChange: onButtonShown);
+  late final isButtonShown = true.obs(onChange: onButtonShown,disposer: this);
   late final Ticker _ticker = createTicker(tickerText);
 
   bool get hasImage => imageBytes != null;

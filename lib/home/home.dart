@@ -6,6 +6,8 @@ import 'home_state.dart';
 class HomePage extends StateWidget<HomePageState> {
   const HomePage({Key? key}) : super(key: key);
 
+  static Widget create(BuildContext context) => const HomePage();
+
   @override
   HomePageState createState() => HomePageState();
 
@@ -25,6 +27,10 @@ class HomePage extends StateWidget<HomePageState> {
             TextButton(
               onPressed: state.test,
               child: Text('state'),
+            ),
+            TextButton(
+              onPressed: state.testDialog,
+              child: Text('test dialog'),
             ),
           ],
         ),

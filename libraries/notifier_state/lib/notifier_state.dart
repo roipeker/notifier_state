@@ -11,8 +11,8 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/widgets.dart';
 
 part 'src/notifier_value.dart';
-part 'src/extensions.dart';
+part 'src/extensions/extensions.dart';
+part 'src/extensions/context_notifications.dart';
 part 'src/widgets.dart';
-part 'src/context_notifications.dart';
 part 'src/bucket/bucket.dart';
 part 'src/bucket/instance_factory.dart';
